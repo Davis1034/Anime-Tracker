@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Anime Watch Planner</title>
+<style>
+:root{--bg:#f2f3f9;--card:#fff;--ink:#1b1f3a;--mut:#667;--line:#dfe2ee;--acc:#3d5afe;--hi:#ffcf3f;--ok:#d8f3e0;--in:#eef1ff;color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme=light]){--bg:#10132a;--card:#1a1e3a;--ink:#eef0ff;--mut:#9aa0c4;--line:#2c3260;--acc:#7b8dff;--hi:#8a6d00;--ok:#1d4030;--in:#262c55;color-scheme:dark}}
+:root[data-theme=dark]{--bg:#10132a;--card:#1a1e3a;--ink:#eef0ff;--mut:#9aa0c4;--line:#2c3260;--acc:#7b8dff;--hi:#8a6d00;--ok:#1d4030;--in:#262c55;color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 ui-rounded,"Hiragino Maru Gothic ProN",system-ui,-apple-system,"Segoe UI",sans-serif}
+.wrap{max-width:860px;margin:0 auto;padding:20px 14px 60px}
+h1{font-size:30px;line-height:1.1;margin:8px 0 6px;letter-spacing:-.5px}
+.mut{color:var(--mut)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin:14px 0}
+label{display:block;font-weight:600;margin:12px 0 4px}
+input,select,button{font:inherit;color:inherit}
+input[type=text],input[type=number],input[type=date],select{width:100%;box-sizing:border-box;padding:9px 10px;border:1px solid var(--line);border-radius:9px;background:var(--in)}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.g7{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.g7 span{display:block;font-size:12px;text-align:center;color:var(--mut)}
+.g7 input{padding:8px 2px;text-align:center}
+button{cursor:pointer;border:0;border-radius:10px;padding:11px 18px;background:var(--acc);color:#fff;font-weight:700}
+button.sec{background:var(--in);color:var(--ink);border:1px solid var(--line)}
+:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
+#err{color:#d33;min-height:20px;margin:8px 0 0}
+.top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap}
+.kp{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin:14px 0}
+.kp div{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.kp b{display:block;font-size:22px}.kp small{color:var(--mut)}
+.bar{height:10px;border-radius:6px;background:var(--line);overflow:hidden;margin:6px 0 14px}
+.bar i{display:block;height:100%;background:var(--acc)}
+details{background:var(--card);border:1px solid var(--line);border-radius:12px;margin:10px 0;overflow:hidden}
+summary{cursor:pointer;padding:12px 14px;font-weight:700;display:flex;flex-wrap:wrap;gap:4px 14px;align-items:baseline}
+summary span{font-weight:400;color:var(--mut)}
+.row{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;padding:9px 14px;border-top:1px solid var(--line)}
+.row.done{background:var(--ok)}.row.today{box-shadow:inset 5px 0 0 var(--hi)}
+.row .dt{width:78px;font-weight:600}.row .pl{flex:1;min-width:150px}.row .pl b{font-size:18px}
+.row input[type=checkbox]{width:22px;height:22px;accent-color:var(--acc)}
+.row input[type=number]{width:58px;padding:6px 4px;text-align:center}
+.hint{font-size:13px;color:var(--mut)}
+</style></head><body>
+<div class="wrap" id="app"></div>
+<script>
+const $=s=>document.querySelector(s),DN=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],O=new Set();
+const iso=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+const pd=s=>{const[a,b,c]=s.split('-').map(Number);return new Date(a,b-1,c)};
+const esc=s=>s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const fd=d=>(d.getMonth()+1)+'/'+d.getDate();
+let S={};try{S=JSON.parse(localStorage.getItem('awp1'))||{}}catch(e){}
+const save=()=>{try{localStorage.setItem('awp1',JSON.stringify(S))}catch(e){}};
+
+function calc(c,inp){
+  const s=pd(c.start),e=pd(c.end),days=[];
+  for(let d=new Date(s);d<=e;d.setDate(d.getDate()+1)){const k=iso(d),i=inp[k]||{},wd=d.getDay();
+    days.push({date:new Date(d),k,wd,u:Math.round(c.h[wd]*100),miss:+i.m||0,ex:+i.x||0,done:!!i.d,air:i.a!=null?+i.a:(c.air===wd?1:0)})}
+  const wk=[];for(let w=0;w*7<days.length;w++){const ds=days.slice(w*7,w*7+7);wk.push({ds,W:ds.reduce((a,d)=>a+d.u,0),nw:ds.reduce((a,d)=>a+d.air,0)})}
+  let rem=wk.reduce((a,w)=>a+w.W,0),cum=0,X=0;
+  wk.forEach(w=>{
+    w.ws=cum;const R=c.total+X-cum;
+    w.q=(R>0&&rem>0?Math.ceil(R*w.W/rem):0)+w.nw;let pp=0;
+    w.ds.forEach((d,j)=>{
+      const left=Math.max(0,w.q-pp),rest=w.ds.slice(j),U=rest.reduce((a,x)=>a+x.u,0);let p=0;
+      if(left>0&&U>0){
+        const f=rest.map(x=>{const n=left*x.u,r=n%U;return{fl:(n-r)/U,r,u:x.u}}),L=left-f.reduce((a,x)=>a+x.fl,0),m=f[0];
+        const rank=1+f.slice(1).filter(x=>x.r>m.r||(x.r===m.r&&x.u>m.u)).length;p=m.fl+(rank<=L?1:0)}
+      d.plan=p;d.cb=cum;d.m=Math.min(d.miss,p);d.act=p-d.m+d.ex;cum+=d.act;pp+=d.act});
+    w.goal=c.first-1+w.ws+w.q;X+=w.nw;rem-=w.W});
+  return{days,wk,grand:c.total+wk.reduce((a,w)=>a+w.nw,0),end:cum}}
+
+function setup(){
+  const c=S.cfg||{},t=new Date(),e=new Date();e.setDate(e.getDate()+181);
+  const h=c.h||[4,2,2,2,2,3,5];
+  $('#app').innerHTML=`<h1>Anime watch planner</h1>
+  <p class="mut">Tell me what you're watching and when you want to finish. I'll build a day-by-day tracker that spreads the episodes across your week.</p>
+  <form id="f" class="card"><label>Anime title</label><input type="text" name="title" required placeholder="e.g. One Piece" value="${esc(c.title||'')}">
+  <div class="g2"><div><label>Episodes left to watch</label><input type="number" name="total" min="1" required value="${c.total||''}"></div>
+  <div><label>Episode number you're on now</label><input type="number" name="first" min="0" required value="${c.first??1}"></div>
+  <div><label>Start date</label><input type="date" name="start" required value="${c.start||iso(t)}"></div>
+  <div><label>End date</label><input type="date" name="end" required value="${c.end||iso(e)}"></div></div>
+  <label>Free time for watching (hours per day)</label><div class="g7">${DN.map((n,i)=>`<div><span>${n}</span><input type="number" step="0.25" min="0" name="h${i}" value="${h[i]}"></div>`).join('')}</div>
+  <p class="hint">Hours only decide how episodes are weighted across days. More free time means more episodes that day.</p>
+  <label>Is it still airing?</label><select name="air"><option value="-1">No, every episode is already out</option>${DN.map((n,i)=>`<option value="${i}" ${c.air===i?'selected':''}>Yes, a new episode every ${n}</option>`).join('')}</select>
+  <p class="hint">Each new episode is added to that week's count. You can change any day later (for example, set it to 0 during a break).</p>
+  <button>Build my tracker</button><p id="err"></p></form>`;
+  $('#f').onsubmit=ev=>{ev.preventDefault();const f=new FormData(ev.target),g=n=>f.get(n);
+    const n={title:g('title').trim(),total:+g('total'),first:+g('first'),start:g('start'),end:g('end'),air:+g('air'),h:DN.map((_,i)=>Math.max(0,+g('h'+i)||0))};
+    if(pd(n.end)<pd(n.start))return $('#err').textContent='The end date must be on or after the start date.';
+    if(!n.h.some(x=>x>0))return $('#err').textContent='Enter free time for at least one day of the week.';
+    S.cfg=n;S.inp=S.inp||{};O.clear();save();track()}}
+
+function track(){
+  const c=S.cfg,r=calc(c,S.inp),td=iso(new Date()),cw=Math.max(0,r.wk.findIndex(w=>w.ds.some(d=>d.k===td)));
+  if(!O.size)O.add(cw);
+  const done=r.days.filter(d=>d.done).reduce((a,d)=>a+d.act,0),left=r.grand-done,short=r.grand-r.end,tdy=r.days.find(d=>d.k===td);
+  const rng=d=>d.plan?'Ep '+(c.first+d.cb)+(d.plan>1?'–'+(c.first-1+d.cb+d.plan):''):'rest day';
+  $('#app').innerHTML=`<div class="top"><div><h1>${esc(c.title)}</h1><div class="mut">${fd(pd(c.start))} to ${fd(pd(c.end))}, episodes ${c.first} to ${c.first-1+r.grand}</div></div>
+  <div><button class="sec" id="ed">Edit setup</button> <button class="sec" id="rs">Start over</button></div></div>
+  <div class="kp"><div><b>${done}</b><small>watched</small></div><div><b>${left}</b><small>left</small></div>
+  <div><b>${tdy?rng(tdy):'none'}</b><small>today</small></div><div><b>${short>0?short+' short':'on track'}</b><small>to finish by ${fd(pd(c.end))}</small></div></div>
+  <div class="bar"><i style="width:${Math.min(100,100*done/r.grand)}%"></i></div>
+  <p class="hint">Tick a day when you finish it. Missed: episodes you skipped, and the rest of that week re-plans. Extra: episodes beyond the plan, which lighten the rest of the week and only carry forward once the week is done. New: episodes that air that day.</p>`+
+  r.wk.map((w,i)=>`<details data-w="${i}" ${O.has(i)?'open':''}><summary>Week ${i+1} <span>${fd(w.ds[0].date)} to ${fd(w.ds[w.ds.length-1].date)}</span> <b>${w.q} episodes</b> <span>goal: episode ${w.goal}${w.nw?', includes '+w.nw+' new':''}</span> <span>${w.ds.filter(d=>d.done).length}/${w.ds.length} days done</span></summary>`+
+    w.ds.map(d=>`<div class="row ${d.done?'done':''} ${d.k===td?'today':''}"><input type="checkbox" data-k="${d.k}" data-f="d" ${d.done?'checked':''} aria-label="Done ${d.k}">
+    <div class="dt">${DN[d.wd]} ${fd(d.date)}</div><div class="pl"><b>${d.plan}</b> ${d.plan===1?'episode':'episodes'} <span class="mut">${rng(d)}</span></div>
+    <input type="number" min="0" max="${d.plan}" placeholder="missed" title="Missed" data-k="${d.k}" data-f="m" value="${d.miss||''}">
+    <input type="number" min="0" placeholder="extra" title="Extra" data-k="${d.k}" data-f="x" value="${d.ex||''}">
+    <input type="number" min="0" max="10" placeholder="new" title="New episodes airing" data-k="${d.k}" data-f="a" value="${d.air||''}"></div>`).join('')+'</details>').join('');
+  $('#ed').onclick=setup;$('#rs').onclick=()=>{if(confirm('Delete this tracker and all your progress?')){S={};save();O.clear();setup()}}}
+
+document.addEventListener('change',e=>{const t=e.target,k=t.dataset.k;if(!k)return;
+  const i=S.inp[k]=S.inp[k]||{},f=t.dataset.f,v=Math.max(0,Math.floor(+t.value||0));
+  if(f==='d')i.d=t.checked;else if(f==='m')i.m=v;else if(f==='x')i.x=v;else i.a=Math.min(10,v);
+  save();const y=scrollY;track();scrollTo(0,y)});
+document.addEventListener('toggle',e=>{const w=e.target.dataset&&e.target.dataset.w;if(w!=null)e.target.open?O.add(+w):O.delete(+w)},true);
+S.cfg?track():setup();
+</script></body></html>
